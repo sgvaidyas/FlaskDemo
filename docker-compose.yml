@@ -1,0 +1,38 @@
+version: '3.8'  # Specify the Docker Compose version
+
+volumes:
+  db_data:  # Named volume for MySQL data persistence
+
+services:
+  db:
+    image: mysql:latest  # Use the latest version of MySQL
+    restart: always  # Always restart the container
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword  # Root password for MySQL
+      MYSQL_DATABASE: sample_db  # Default database name
+      MYSQL_USER: user  # User for the database
+      MYSQL_PASSWORD: userpassword  # Password for the user
+    volumes:
+      - db_data:/var/lib/mysql  # Bind MySQL data to the named volume
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql  # Initialize database with SQL file
+    healthcheck:  # Health check configuration
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s  # Interval between health checks
+      timeout: 5s  # Timeout for each health check
+      retries: 3  # Number of retries before considering the service unhealthy
+
+  web:
+    build: .  # Build context for the web service (Flask app)
+    restart: always  # Always restart the container
+    ports:
+      - "5000:5000"  # Expose Flask app on port 5000
+    environment:
+      DB_HOST: db  # Database host
+      DB_USER: user  # Database user
+      DB_PASSWORD: userpassword  # Database user password
+      DB_NAME: sample_db  # Database name
+    depends_on:
+      db:
+        condition: service_healthy  # Ensure the database is started and healthy before the web service
+
+
